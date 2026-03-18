@@ -1,0 +1,46 @@
+name: greenbamboo
+description: 🎋 青竹 - 隐私优先的个人健康追踪器
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP 请求
+  dio: ^5.4.0
+  connectivity_plus: ^5.0.2
+
+  # 状态管理
+  provider: ^6.1.1
+
+  # 本地数据库
+  sqflite: ^2.3.0
+  path: ^1.8.3
+
+  # 安全存储（Token）
+  flutter_secure_storage: ^9.0.0
+
+  # UI 组件
+  cupertino_icons: ^1.0.6
+  fl_chart: ^0.65.0
+  intl: ^0.18.1
+
+  # 工具
+  shared_preferences: ^2.2.2
+  url_launcher: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+
+  # 资源文件
+  # assets:
+  #   - assets/images/
