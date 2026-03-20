@@ -481,7 +481,7 @@ class DashboardScreen extends StatelessWidget {
                       metric['id'],
                       metric['name'],
                       metric['unit'] ?? '',
-                      selectedDate,
+                      recordedAt: selectedDate,
                     );
                   },
                   child: const Text('确认'),
