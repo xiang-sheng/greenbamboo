@@ -221,6 +221,16 @@ class LocalDatabase {
     return await db.query('metrics', orderBy: 'created_at DESC');
   }
 
+  /// 删除指标
+  Future<int> deleteMetric(String id) async {
+    final db = await database;
+    return await db.delete(
+      'metrics',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   /// 清空指标
   Future<void> clearMetrics() async {
     final db = await database;

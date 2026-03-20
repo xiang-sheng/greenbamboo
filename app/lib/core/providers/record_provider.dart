@@ -172,6 +172,98 @@ class RecordProvider extends ChangeNotifier {
     }
   }
 
+  /// 创建指标
+  Future<bool> createMetric({
+    required String id,
+    required String name,
+    required String type,
+    required String unit,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final now = DateTime.now();
+      await _localDb.insertMetric({
+        'id': id,
+        'name': name,
+        'type': type,
+        'unit': unit,
+        'is_preset': 0,
+        'created_at': now.millisecondsSinceEpoch,
+      });
+
+      // 如果是服务器模式，尝试同步到服务器
+      if (_apiService.isServerMode) {
+        try {
+          await _apiService.createMetric(
+            name: name,
+            type: type,
+            unit: unit,
+          );
+        } catch (e) {
+          debugPrint('Sync metric failed: $e');
+        }
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _error = 'Failed to create metric: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// 删除指标
+  Future<bool> deleteMetric(String metricId) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // 先删除相关记录
+      final db = _localDb;
+      final records = await db.getAllRecords(excludeMigrated: false);
+      for (var record in records) {
+        if (record['metric_id'] == metricId) {
+          await db.deleteRecord(record['id'] as String);
+        }
+      }
+
+      // 删除指标
+      final metrics = await db.getMetrics();
+      final metricIndex = metrics.indexWhere((m) => m['id'] == metricId);
+      if (metricIndex != -1) {
+        // SQLite 没有直接删除方法，需要重建数据库或使用 SQL
+        await db.database.then((db) => db.delete(
+          'metrics',
+          where: 'id = ?',
+          whereArgs: [metricId],
+        ));
+      }
+
+      // 如果是服务器模式，尝试同步到服务器
+      if (_apiService.isServerMode) {
+        try {
+          await _apiService.deleteMetric(metricId);
+        } catch (e) {
+          debugPrint('Sync metric delete failed: $e');
+        }
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _error = 'Failed to delete metric: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
   // ==================== 同步 ====================
 
   /// 同步数据

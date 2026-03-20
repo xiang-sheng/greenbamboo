@@ -6,6 +6,7 @@ class RecordInputDialog extends StatefulWidget {
   final String metricId;
   final String metricName;
   final String metricUnit;
+  final DateTime? recordedAt;
   final Function(double value, String note, DateTime recordedAt)? onSave;
 
   const RecordInputDialog({
@@ -13,6 +14,7 @@ class RecordInputDialog extends StatefulWidget {
     required this.metricId,
     required this.metricName,
     required this.metricUnit,
+    this.recordedAt,
     this.onSave,
   });
 
@@ -23,8 +25,16 @@ class RecordInputDialog extends StatefulWidget {
 class _RecordInputDialogState extends State<RecordInputDialog> {
   final _valueController = TextEditingController();
   final _noteController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = TimeOfDay.now();
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = widget.recordedAt ?? DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day);
+    _selectedTime = TimeOfDay.fromDateTime(now);
+  }
 
   @override
   void dispose() {

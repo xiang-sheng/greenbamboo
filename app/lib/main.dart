@@ -145,6 +145,12 @@ class _AppStartupState extends State<AppStartup> {
     });
   }
 
+  void _handleLocalModeSelected() {
+    setState(() {
+      _needsOnboarding = false;
+    });
+  }
+
   void _handleLoginSuccess() {
     setState(() {
       _showLogin = false;
@@ -162,6 +168,7 @@ class _AppStartupState extends State<AppStartup> {
     if (_needsOnboarding) {
       return OnboardingScreen(
         onServerModeSelected: _handleServerModeSelected,
+        onLocalModeSelected: _handleLocalModeSelected,
       );
     }
     
