@@ -498,9 +498,9 @@ class DashboardScreen extends StatelessWidget {
     BuildContext context,
     String metricId,
     String metricName,
-    String metricUnit,
-    [DateTime? recordedAt],
-  ) {
+    String metricUnit, {
+    DateTime? recordedAt,
+  }) {
     final recordProvider = context.read<RecordProvider>();
 
     showDialog(

@@ -242,12 +242,7 @@ class RecordProvider extends ChangeNotifier {
         ));
       }
 
-      // 如果已配置服务器，尝试同步删除
-      try {
-        await _apiService.deleteMetric(metricId);
-      } catch (e) {
-        debugPrint('Sync metric delete failed: $e');
-      }
+      // TODO: 添加服务器端指标删除支持
 
       _isLoading = false;
       notifyListeners();
