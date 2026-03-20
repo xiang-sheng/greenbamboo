@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  greenbamboo:
+    build: .
+    container_name: greenbamboo
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - DB_PATH=/app/data/health.db
+      - JWT_SECRET=${JWT_SECRET:-greenbamboo-secret-change-me}
+      - PORT=3000
+      - GIN_MODE=release
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
