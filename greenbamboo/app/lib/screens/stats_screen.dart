@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../providers/record_provider.dart';
-import '../providers/auth_provider.dart';
+import '../core/providers/record_provider.dart';
+import '../core/providers/auth_provider.dart';
 
 /// 统计图表页面
 class StatsScreen extends StatefulWidget {
