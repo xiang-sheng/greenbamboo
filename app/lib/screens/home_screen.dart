@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../core/providers/auth_provider.dart';
 import '../core/providers/record_provider.dart';
 import '../ui/widgets/record_input_dialog.dart';
 import 'record_list_screen.dart';

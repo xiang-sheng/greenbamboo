@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 
 /// 柱状图组件 - 用于对比不同指标
 class BarChartWidget extends StatelessWidget {
