@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/auth_provider.dart';
+import '../core/providers/storage_mode_provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onLoginSuccess;
+  
+  const LoginScreen({super.key, this.onLoginSuccess});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -35,16 +38,23 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
+    final storageProvider = context.read<StorageModeProvider>();
+    
+    // 确保设置为服务器模式
+    await storageProvider.switchToServer();
+
     final success = await authProvider.login(
       serverUrl: _serverController.text,
       email: _emailController.text,
       password: _passwordController.text,
     );
 
-    if (!success && mounted) {
+    if (success && mounted) {
+      widget.onLoginSuccess?.call();
+    } else if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.error ?? 'Operation failed'),
+          content: Text(authProvider.error ?? '登录失败'),
           backgroundColor: Colors.red,
         ),
       );
@@ -62,7 +72,6 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 48),
-              
               // Logo
               const Icon(
                 Icons.eco,
@@ -70,7 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: Colors.green,
               ),
               const SizedBox(height: 16),
-              
               // 标题
               const Text(
                 '🎋 青竹',
@@ -90,7 +98,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 48),
-
               // 表单
               Form(
                 key: _formKey,
@@ -110,15 +117,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.isEmpty) {
                           return '请输入服务器地址';
                         }
-                        if (!value.startsWith('http://') &&
-                            !value.startsWith('https://')) {
+                        if (!value.startsWith('http://') && !value.startsWith('https://')) {
                           return '地址必须以 http:// 或 https:// 开头';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
-
                     // 邮箱
                     TextFormField(
                       controller: _emailController,
@@ -139,7 +144,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-
                     // 密码
                     TextFormField(
                       controller: _passwordController,
@@ -160,7 +164,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-
                     // 提交按钮
                     Consumer<AuthProvider>(
                       builder: (context, authProvider, child) {
@@ -190,9 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
-
               // 切换登录/注册
               TextButton(
                 onPressed: () {
@@ -201,21 +202,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   });
                 },
                 child: Text(
-                  _isLogin
-                      ? '还没有账号？立即注册'
-                      : '已有账号？立即登录',
+                  _isLogin ? '还没有账号？立即注册' : '已有账号？立即登录',
                 ),
               ),
-
               const SizedBox(height: 32),
-
               // 说明文字
-              Text(
-                '💡 提示：首次使用需要先部署 GreenBamboo 服务器',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '💡 服务器模式支持多设备同步',
+                        style: TextStyle(fontSize: 13, color: Colors.blue[700]),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
