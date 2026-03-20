@@ -77,17 +77,21 @@ class RecordProvider extends ChangeNotifier {
       // 保存到本地
       await _localDb.clearRecords();
       for (var record in _records) {
-        await _localDb.insertRecord({
-          'id': record['id'],
-          'metric_id': record['metric_id'],
-          'metric_name': record['metric_name'] ?? '',
-          'value': record['value'] ?? 0.0,
-          'text_value': record['text_value'] ?? '',
-          'note': record['note'] ?? '',
-          'recorded_at': record['recorded_at'],
-          'is_synced': 1,
-          'created_at': record['created_at'],
-        });
+        final recordedAt = record['recorded_at'];
+        final recordedAtMs = recordedAt is int 
+          ? (recordedAt > 10000000000 ? recordedAt : recordedAt * 1000)
+          : DateTime.parse(recordedAt as String).millisecondsSinceEpoch;
+        
+        await _localDb.insertRecord(
+          id: record['id'],
+          metricId: record['metric_id'],
+          metricName: record['metric_name'] ?? '',
+          value: (record['value'] as num).toDouble(),
+          textValue: record['text_value'] ?? '',
+          note: record['note'] ?? '',
+          recordedAt: DateTime.fromMillisecondsSinceEpoch(recordedAtMs),
+          isSynced: true,
+        );
       }
 
       _isLoading = false;
@@ -116,16 +120,14 @@ class RecordProvider extends ChangeNotifier {
       final recordId = '${now.millisecondsSinceEpoch}_${_generateId(8)}';
 
       // 保存到本地数据库
-      await _localDb.insertRecord({
-        'id': recordId,
-        'metric_id': metricId,
-        'value': value,
-        'text_value': '',
-        'note': note ?? '',
-        'recorded_at': (recordedAt ?? now).millisecondsSinceEpoch ~/ 1000,
-        'is_synced': 0,
-        'created_at': now.millisecondsSinceEpoch ~/ 1000,
-      });
+      await _localDb.insertRecord(
+        id: recordId,
+        metricId: metricId,
+        value: value,
+        note: note,
+        recordedAt: recordedAt ?? now,
+        isSynced: false,
+      );
 
       // 尝试同步到服务器
       try {
@@ -135,8 +137,10 @@ class RecordProvider extends ChangeNotifier {
           note: note,
           recordedAt: recordedAt,
         );
+
         // 同步成功，标记为已同步
         await _localDb.markAsSynced(recordId);
+
         // 重新加载记录
         await loadRecords();
       } catch (e) {
@@ -178,6 +182,7 @@ class RecordProvider extends ChangeNotifier {
 
       // 获取待同步记录
       final pendingRecords = await _localDb.getPendingSync();
+
       if (pendingRecords.isNotEmpty) {
         // 转换为 API 格式
         final localChanges = pendingRecords.map((r) => {
@@ -197,14 +202,14 @@ class RecordProvider extends ChangeNotifier {
 
         // 标记为已同步
         for (var record in pendingRecords) {
-          await _localDb.markAsSynced(record['id']);
+          await _localDb.markAsSynced(record['id'] as String);
         }
       }
 
       // 重新加载记录
       await loadRecords();
-
       _lastSync = DateTime.now();
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
