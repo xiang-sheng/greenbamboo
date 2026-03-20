@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/record_provider.dart';
+import '../ui/widgets/record_input_dialog.dart';
 import 'metric_management_screen.dart';
 import 'stats_screen.dart';
 import 'settings_screen.dart';

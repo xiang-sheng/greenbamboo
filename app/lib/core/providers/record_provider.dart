@@ -193,17 +193,15 @@ class RecordProvider extends ChangeNotifier {
         'created_at': now.millisecondsSinceEpoch,
       });
 
-      // 如果是服务器模式，尝试同步到服务器
-      if (_apiService.isServerMode) {
-        try {
-          await _apiService.createMetric(
-            name: name,
-            type: type,
-            unit: unit,
-          );
-        } catch (e) {
-          debugPrint('Sync metric failed: $e');
-        }
+      // 如果已配置服务器，尝试同步到服务器
+      try {
+        await _apiService.createMetric(
+          name: name,
+          type: type,
+          unit: unit,
+        );
+      } catch (e) {
+        debugPrint('Sync metric failed: $e');
       }
 
       _isLoading = false;
@@ -244,13 +242,11 @@ class RecordProvider extends ChangeNotifier {
         ));
       }
 
-      // 如果是服务器模式，尝试同步到服务器
-      if (_apiService.isServerMode) {
-        try {
-          await _apiService.deleteMetric(metricId);
-        } catch (e) {
-          debugPrint('Sync metric delete failed: $e');
-        }
+      // 如果已配置服务器，尝试同步删除
+      try {
+        await _apiService.deleteMetric(metricId);
+      } catch (e) {
+        debugPrint('Sync metric delete failed: $e');
       }
 
       _isLoading = false;

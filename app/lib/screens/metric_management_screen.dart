@@ -321,7 +321,7 @@ class _MetricManagementScreenState extends State<MetricManagementScreen> {
       builder: (context) {
         return AlertDialog(
           title: const Text('确认删除'),
-          content: Text('确定要删除指标 "${metric['name']}' 吗？这将同时删除所有相关记录。'),
+          content: Text('确定要删除指标 "${metric['name']}" 吗？这将同时删除所有相关记录。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
