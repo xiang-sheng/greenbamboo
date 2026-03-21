@@ -12,7 +12,7 @@ class ApiService {
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
     
-    // 添加重试和错误处理
+    // 添加错误处理拦截器
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         if (_token != null) {
@@ -20,25 +20,43 @@ class ApiService {
         }
         return handler.next(options);
       },
-      onError: (error, handler) {
-        // 转换错误信息
-        if (error.type == DioExceptionType.connectionTimeout ||
-            error.type == DioExceptionType.receiveTimeout ||
-            error.type == DioExceptionType.sendTimeout) {
-          error.message = '请求超时，请检查网络连接或服务器地址';
-        } else if (error.type == DioExceptionType.connectionError) {
-          error.message = '无法连接到服务器，请检查服务器地址是否正确';
-        } else if (error.type == DioExceptionType.badResponse) {
-          final statusCode = error.response?.statusCode;
-          if (statusCode == 401) {
-            error.message = '认证失败，请检查账号密码';
-          } else if (statusCode == 404) {
-            error.message = '服务器接口不存在';
-          } else if (statusCode != null && statusCode >= 500) {
-            error.message = '服务器错误 ($statusCode)';
-          }
+      onError: (DioException error, ErrorInterceptorHandler handler) {
+        // 创建友好的错误消息
+        String friendlyMessage;
+        
+        switch (error.type) {
+          case DioExceptionType.connectionTimeout:
+          case DioExceptionType.receiveTimeout:
+          case DioExceptionType.sendTimeout:
+            friendlyMessage = '请求超时，请检查网络连接或服务器地址';
+            break;
+          case DioExceptionType.connectionError:
+            friendlyMessage = '无法连接到服务器，请检查服务器地址是否正确';
+            break;
+          case DioExceptionType.badResponse:
+            final statusCode = error.response?.statusCode;
+            if (statusCode == 401) {
+              friendlyMessage = '认证失败，请检查账号密码';
+            } else if (statusCode == 404) {
+              friendlyMessage = '服务器接口不存在';
+            } else if (statusCode != null && statusCode >= 500) {
+              friendlyMessage = '服务器错误 ($statusCode)';
+            } else {
+              friendlyMessage = '请求失败 ($statusCode)';
+            }
+            break;
+          default:
+            friendlyMessage = '网络错误，请稍后重试';
         }
-        return handler.next(error);
+        
+        // 重新抛出带有友好消息的错误
+        handler.next(DioException(
+          requestOptions: error.requestOptions,
+          message: friendlyMessage,
+          type: error.type,
+          error: error.error,
+          response: error.response,
+        ));
       },
     ));
   }
