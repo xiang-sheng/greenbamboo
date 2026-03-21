@@ -9,8 +9,38 @@ class ApiService {
 
   ApiService() {
     _dio = Dio();
-    _dio.options.connectTimeout = const Duration(seconds: 30);
-    _dio.options.receiveTimeout = const Duration(seconds: 30);
+    _dio.options.connectTimeout = const Duration(seconds: 10);
+    _dio.options.receiveTimeout = const Duration(seconds: 10);
+    
+    // 添加重试和错误处理
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        if (_token != null) {
+          options.headers['Authorization'] = 'Bearer $_token';
+        }
+        return handler.next(options);
+      },
+      onError: (error, handler) {
+        // 转换错误信息
+        if (error.type == DioExceptionType.connectionTimeout ||
+            error.type == DioExceptionType.receiveTimeout ||
+            error.type == DioExceptionType.sendTimeout) {
+          error.message = '请求超时，请检查网络连接或服务器地址';
+        } else if (error.type == DioExceptionType.connectionError) {
+          error.message = '无法连接到服务器，请检查服务器地址是否正确';
+        } else if (error.type == DioExceptionType.badResponse) {
+          final statusCode = error.response?.statusCode;
+          if (statusCode == 401) {
+            error.message = '认证失败，请检查账号密码';
+          } else if (statusCode == 404) {
+            error.message = '服务器接口不存在';
+          } else if (statusCode != null && statusCode >= 500) {
+            error.message = '服务器错误 ($statusCode)';
+          }
+        }
+        return handler.next(error);
+      },
+    ));
   }
 
   /// 设置服务器地址
@@ -23,21 +53,7 @@ class ApiService {
     _token = token;
   }
 
-  /// 获取拦截器
-  InterceptorsWrapper get interceptors => InterceptorsWrapper(
-    onRequest: (options, handler) {
-      if (_token != null) {
-        options.headers['Authorization'] = 'Bearer $_token';
-      }
-      return handler.next(options);
-    },
-    onResponse: (response, handler) {
-      return handler.next(response);
-    },
-    onError: (error, handler) {
-      return handler.next(error);
-    },
-  );
+
 
   // ==================== 认证接口 ====================
 

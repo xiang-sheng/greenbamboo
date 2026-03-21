@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/storage_mode_provider.dart';
 
@@ -46,6 +47,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('欢迎使用'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            // 显示退出确认
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('确认退出'),
+                content: const Text('确定要退出应用吗？'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // 关闭对话框
+                      // 退出应用（Android）
+                      SystemNavigator.pop();
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('退出', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            );
+          },
+          tooltip: '退出应用',
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -53,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 48),
+              const SizedBox(height: 16),
               // Logo
               const Icon(Icons.eco, size: 100, color: Colors.green),
               const SizedBox(height: 24),

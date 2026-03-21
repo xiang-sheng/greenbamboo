@@ -35,67 +35,74 @@ class _MetricManagementScreenState extends State<MetricManagementScreen> {
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('创建新指标'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: '指标名称',
-                    hintText: '例如：体重、睡眠、心情',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _unitController,
-                  decoration: const InputDecoration(
-                    labelText: '单位（可选）',
-                    hintText: '例如：kg, h, 分',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedType,
-                  decoration: const InputDecoration(
-                    labelText: '类型',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: '数值', child: Text('数值')),
-                    DropdownMenuItem(value: '文本', child: Text('文本')),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('创建新指标'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: '指标名称',
+                        hintText: '例如：体重、睡眠、心情',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {}); // 触发重建，更新按钮状态
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _unitController,
+                      decoration: const InputDecoration(
+                        labelText: '单位（可选）',
+                        hintText: '例如：kg, h, 分',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _selectedType,
+                      decoration: const InputDecoration(
+                        labelText: '类型',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: '数值', child: Text('数值')),
+                        DropdownMenuItem(value: '文本', child: Text('文本')),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() {
+                          _selectedType = value!;
+                        });
+                      },
+                    ),
                   ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedType = value!;
-                    });
-                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: _nameController.text.isEmpty
+                      ? null
+                      : () {
+                          Navigator.pop(context, {
+                            'name': _nameController.text,
+                            'unit': _unitController.text,
+                            'type': _selectedType,
+                          });
+                        },
+                  child: const Text('创建'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: _nameController.text.isEmpty
-                  ? null
-                  : () {
-                      Navigator.pop(context, {
-                        'name': _nameController.text,
-                        'unit': _unitController.text,
-                        'type': _selectedType,
-                      });
-                    },
-              child: const Text('创建'),
-            ),
-          ],
+            );
+          },
         );
       },
     );

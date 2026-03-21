@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true; // true=登录，false=注册
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -37,33 +38,64 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = context.read<AuthProvider>();
-    final storageProvider = context.read<StorageModeProvider>();
-    
-    // 确保设置为服务器模式
-    await storageProvider.switchToServer();
+    setState(() => _isLoading = true);
 
-    final success = await authProvider.login(
-      serverUrl: _serverController.text,
-      email: _emailController.text,
-      password: _passwordController.text,
-    );
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final storageProvider = context.read<StorageModeProvider>();
+      
+      // 确保设置为服务器模式
+      await storageProvider.switchToServer();
 
-    if (success && mounted) {
-      widget.onLoginSuccess?.call();
-    } else if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? '登录失败'),
-          backgroundColor: Colors.red,
-        ),
+      final success = await authProvider.login(
+        serverUrl: _serverController.text,
+        email: _emailController.text,
+        password: _passwordController.text,
       );
+
+      if (success && mounted) {
+        widget.onLoginSuccess?.call();
+      } else if (!success && mounted) {
+        _showErrorDialog(authProvider.error ?? '登录失败');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog(e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('提示'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(_isLogin ? '登录' : '注册'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // 返回到存储模式选择页面
+            Navigator.pop(context);
+          },
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
