@@ -5,8 +5,9 @@ import '../core/providers/storage_mode_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
+  final VoidCallback? onBack;
   
-  const LoginScreen({super.key, this.onLoginSuccess});
+  const LoginScreen({super.key, this.onLoginSuccess, this.onBack});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -93,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: () {
             // 返回到存储模式选择页面
             Navigator.pop(context);
+            widget.onBack?.call();
           },
         ),
       ),

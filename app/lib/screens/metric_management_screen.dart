@@ -228,61 +228,8 @@ class _MetricManagementScreenState extends State<MetricManagementScreen> {
 
   void _showRecordDialog(BuildContext context, Map<String, dynamic> metric) {
     final recordProvider = context.read<RecordProvider>();
-
-    // 显示日期选择器
-    showDialog(
-      context: context,
-      builder: (context) {
-        DateTime selectedDate = DateTime.now();
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('选择日期'),
-              content: SizedBox(
-                width: 300,
-                child: CalendarDatePicker(
-                  initialDate: selectedDate,
-                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                  lastDate: DateTime.now(),
-                  onDateChanged: (date) {
-                    setState(() {
-                      selectedDate = date;
-                    });
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showRecordInputDialog(
-                      context,
-                      metric,
-                      selectedDate,
-                    );
-                  },
-                  child: const Text('确认'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showRecordInputDialog(
-    BuildContext context,
-    Map<String, dynamic> metric,
-    DateTime recordedDate,
-  ) {
-    final recordProvider = context.read<RecordProvider>();
-
+    
+    // 直接显示记录输入对话框（已包含日期选择）
     showDialog(
       context: context,
       builder: (context) {
@@ -290,7 +237,7 @@ class _MetricManagementScreenState extends State<MetricManagementScreen> {
           metricId: metric['id'],
           metricName: metric['name'],
           metricUnit: metric['unit'] ?? '',
-          recordedAt: recordedDate,
+          recordedAt: DateTime.now(),
           onSave: (value, note, recordedAt) async {
             final success = await recordProvider.createRecord(
               metricId: metric['id'],
@@ -298,7 +245,6 @@ class _MetricManagementScreenState extends State<MetricManagementScreen> {
               note: note,
               recordedAt: recordedAt,
             );
-
             if (context.mounted) {
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(

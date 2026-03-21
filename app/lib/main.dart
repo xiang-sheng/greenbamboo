@@ -148,11 +148,20 @@ class _AppStartupState extends State<AppStartup> {
   void _handleLocalModeSelected() {
     setState(() {
       _needsOnboarding = false;
+      _showLogin = false;
     });
   }
 
   void _handleLoginSuccess() {
     setState(() {
+      _showLogin = false;
+    });
+  }
+
+  void _handleLoginBack() {
+    // 用户从登录页面返回，重新显示 onboarding
+    setState(() {
+      _needsOnboarding = true;
       _showLogin = false;
     });
   }
@@ -176,6 +185,7 @@ class _AppStartupState extends State<AppStartup> {
     if (_showLogin) {
       return LoginScreen(
         onLoginSuccess: _handleLoginSuccess,
+        onBack: _handleLoginBack,
       );
     }
     

@@ -60,8 +60,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // 初始化时加载数据
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final recordProvider = context.read<RecordProvider>();
+      if (recordProvider.metrics.isEmpty) {
+        recordProvider.loadMetrics();
+      }
+      if (recordProvider.records.isEmpty) {
+        recordProvider.loadRecords();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -444,50 +464,40 @@ class DashboardScreen extends StatelessWidget {
 
   void _showRecordDialog(BuildContext context, Map<String, dynamic> metric) {
     final recordProvider = context.read<RecordProvider>();
-
-    // 显示日期选择器
+    
+    // 直接显示记录输入对话框（已包含日期选择）
     showDialog(
       context: context,
       builder: (context) {
-        DateTime selectedDate = DateTime.now();
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('选择日期'),
-              content: SizedBox(
-                width: 300,
-                child: CalendarDatePicker(
-                  initialDate: selectedDate,
-                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                  lastDate: DateTime.now(),
-                  onDateChanged: (date) {
-                    setState(() {
-                      selectedDate = date;
-                    });
-                  },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('取消'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showRecordInputDialog(
-                      context,
-                      metric['id'],
-                      metric['name'],
-                      metric['unit'] ?? '',
-                      recordedAt: selectedDate,
-                    );
-                  },
-                  child: const Text('确认'),
-                ),
-              ],
+        return RecordInputDialog(
+          metricId: metric['id'],
+          metricName: metric['name'],
+          metricUnit: metric['unit'] ?? '',
+          recordedAt: DateTime.now(),
+          onSave: (value, note, recordedAt) async {
+            final success = await recordProvider.createRecord(
+              metricId: metric['id'],
+              value: value,
+              note: note,
+              recordedAt: recordedAt,
             );
+            if (context.mounted) {
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('已记录 ${metric['name']}'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('记录失败'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
           },
         );
       },
