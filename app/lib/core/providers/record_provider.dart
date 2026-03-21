@@ -16,7 +16,6 @@ class RecordProvider extends ChangeNotifier {
   RecordProvider(this._apiService, this._localDb);
 
   // ==================== Getters ====================
-
   List<dynamic> get records => _records;
   List<dynamic> get metrics => _metrics;
   bool get isLoading => _isLoading;
@@ -31,26 +30,32 @@ class RecordProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      // 先从本地加载
+      // 先从本地加载（确保有数据）
       final localMetrics = await _localDb.getMetrics();
-      if (localMetrics.isNotEmpty) {
-        _metrics = localMetrics;
-      }
+      _metrics = localMetrics;
+      notifyListeners();
 
-      // 从服务器获取
-      _metrics = await _apiService.getMetrics();
-
-      // 保存到本地
-      await _localDb.clearMetrics();
-      for (var metric in _metrics) {
-        await _localDb.insertMetric({
-          'id': metric['id'],
-          'name': metric['name'],
-          'type': metric['type'],
-          'unit': metric['unit'] ?? '',
-          'is_preset': metric['is_preset'] ? 1 : 0,
-          'created_at': metric['created_at'],
-        });
+      // 尝试从服务器获取最新数据（可能失败）
+      try {
+        final serverMetrics = await _apiService.getMetrics();
+        if (serverMetrics.isNotEmpty) {
+          _metrics = serverMetrics;
+          // 保存到本地
+          await _localDb.clearMetrics();
+          for (var metric in _metrics) {
+            await _localDb.insertMetric({
+              'id': metric['id'],
+              'name': metric['name'],
+              'type': metric['type'],
+              'unit': metric['unit'] ?? '',
+              'is_preset': metric['is_preset'] ? 1 : 0,
+              'created_at': metric['created_at'],
+            });
+          }
+        }
+      } catch (e) {
+        // 服务器获取失败，继续使用本地数据
+        debugPrint('Failed to load metrics from server: $e');
       }
 
       _isLoading = false;
@@ -68,30 +73,41 @@ class RecordProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      // 从服务器获取
-      _records = await _apiService.getRecords(
-        metricId: metricId,
-        limit: 100,
-      );
+      // 先从本地加载（确保有数据）
+      final localRecords = await _localDb.getRecords(metricId: metricId);
+      _records = localRecords;
+      notifyListeners();
 
-      // 保存到本地
-      await _localDb.clearRecords();
-      for (var record in _records) {
-        final recordedAt = record['recorded_at'];
-        final recordedAtMs = recordedAt is int 
-          ? (recordedAt > 10000000000 ? recordedAt : recordedAt * 1000)
-          : DateTime.parse(recordedAt as String).millisecondsSinceEpoch;
-        
-        await _localDb.insertRecord(
-          id: record['id'],
-          metricId: record['metric_id'],
-          metricName: record['metric_name'] ?? '',
-          value: (record['value'] as num).toDouble(),
-          textValue: record['text_value'] ?? '',
-          note: record['note'] ?? '',
-          recordedAt: DateTime.fromMillisecondsSinceEpoch(recordedAtMs),
-          isSynced: true,
+      // 尝试从服务器获取最新数据（可能失败）
+      try {
+        final serverRecords = await _apiService.getRecords(
+          metricId: metricId,
+          limit: 100,
         );
+        if (serverRecords.isNotEmpty) {
+          _records = serverRecords;
+          // 保存到本地
+          await _localDb.clearRecords();
+          for (var record in _records) {
+            final recordedAt = record['recorded_at'];
+            final recordedAtMs = recordedAt is int
+                ? (recordedAt > 10000000000 ? recordedAt : recordedAt * 1000)
+                : DateTime.parse(recordedAt as String).millisecondsSinceEpoch;
+            await _localDb.insertRecord(
+              id: record['id'],
+              metricId: record['metric_id'],
+              metricName: record['metric_name'] ?? '',
+              value: (record['value'] as num).toDouble(),
+              textValue: record['text_value'] ?? '',
+              note: record['note'] ?? '',
+              recordedAt: DateTime.fromMillisecondsSinceEpoch(recordedAtMs),
+              isSynced: true,
+            );
+          }
+        }
+      } catch (e) {
+        // 服务器获取失败，继续使用本地数据
+        debugPrint('Failed to load records from server: $e');
       }
 
       _isLoading = false;
@@ -137,15 +153,16 @@ class RecordProvider extends ChangeNotifier {
           note: note,
           recordedAt: recordedAt,
         );
-
         // 同步成功，标记为已同步
         await _localDb.markAsSynced(recordId);
-
         // 重新加载记录
         await loadRecords();
       } catch (e) {
         // 同步失败，保留在本地待同步
         debugPrint('Sync failed, will sync later: $e');
+        // 重新加载本地记录
+        _records = await _localDb.getRecords();
+        notifyListeners();
       }
 
       _isLoading = false;
@@ -204,6 +221,10 @@ class RecordProvider extends ChangeNotifier {
         debugPrint('Sync metric failed: $e');
       }
 
+      // 重新加载本地指标
+      _metrics = await _localDb.getMetrics();
+      notifyListeners();
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -222,27 +243,25 @@ class RecordProvider extends ChangeNotifier {
       notifyListeners();
 
       // 先删除相关记录
-      final db = _localDb;
-      final records = await db.getAllRecords(excludeMigrated: false);
+      final records = await _localDb.getAllRecords(excludeMigrated: false);
       for (var record in records) {
         if (record['metric_id'] == metricId) {
-          await db.deleteRecord(record['id'] as String);
+          await _localDb.deleteRecord(record['id'] as String);
         }
       }
 
       // 删除指标
-      final metrics = await db.getMetrics();
-      final metricIndex = metrics.indexWhere((m) => m['id'] == metricId);
-      if (metricIndex != -1) {
-        // SQLite 没有直接删除方法，需要重建数据库或使用 SQL
-        await db.database.then((db) => db.delete(
-          'metrics',
-          where: 'id = ?',
-          whereArgs: [metricId],
-        ));
-      }
+      final db = await _localDb.database;
+      await db.delete(
+        'metrics',
+        where: 'id = ?',
+        whereArgs: [metricId],
+      );
 
-      // TODO: 添加服务器端指标删除支持
+      // 重新加载
+      _metrics = await _localDb.getMetrics();
+      _records = await _localDb.getRecords();
+      notifyListeners();
 
       _isLoading = false;
       notifyListeners();
@@ -269,11 +288,11 @@ class RecordProvider extends ChangeNotifier {
       if (pendingRecords.isNotEmpty) {
         // 转换为 API 格式
         final localChanges = pendingRecords.map((r) => {
-          'metric_id': r['metric_id'],
-          'value': r['value'],
-          'note': r['note'],
-          'recorded_at': r['recorded_at'],
-        }).toList();
+              'metric_id': r['metric_id'],
+              'value': r['value'],
+              'note': r['note'],
+              'recorded_at': r['recorded_at'],
+            }).toList();
 
         // 调用同步 API
         await _apiService.sync(

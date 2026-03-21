@@ -159,6 +159,20 @@ class LocalDatabase {
     );
   }
 
+  /// 获取记录（可按指标筛选）
+  Future<List<Map<String, dynamic>>> getRecords({String? metricId}) async {
+    final db = await database;
+    if (metricId != null) {
+      return await db.query(
+        'records',
+        where: 'metric_id = ?',
+        whereArgs: [metricId],
+        orderBy: 'recorded_at DESC',
+      );
+    }
+    return await db.query('records', orderBy: 'recorded_at DESC');
+  }
+
   /// 标记记录为已同步
   Future<void> markAsSynced(String id) async {
     final db = await database;

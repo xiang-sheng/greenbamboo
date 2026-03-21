@@ -92,8 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // 返回到存储模式选择页面
-            Navigator.pop(context);
+            // 直接调用回调，不使用 Navigator.pop（因为不是 push 进来的）
             widget.onBack?.call();
           },
         ),
