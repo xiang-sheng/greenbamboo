@@ -21,6 +21,14 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   void initState() {
     super.initState();
+    // 确保数据已加载
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final recordProvider = context.read<RecordProvider>();
+      if (recordProvider.records.isEmpty || recordProvider.metrics.isEmpty) {
+        recordProvider.loadMetrics();
+        recordProvider.loadRecords();
+      }
+    });
   }
 
   void _initializeMetric(RecordProvider recordProvider) {
