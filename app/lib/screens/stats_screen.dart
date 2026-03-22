@@ -54,15 +54,29 @@ class _StatsScreenState extends State<StatsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => _refreshData(),
+            onPressed: () {
+              debugPrint('StatsScreen: Manual refresh triggered');
+              final recordProvider = context.read<RecordProvider>();
+              recordProvider.loadMetrics();
+              recordProvider.loadRecords();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('正在刷新数据...'), duration: Duration(seconds: 1)),
+              );
+            },
             tooltip: '刷新数据',
           ),
         ],
       ),
       body: Consumer<RecordProvider>(
         builder: (context, recordProvider, child) {
+          debugPrint('=== StatsScreen build ===');
+          debugPrint('isLoading: ${recordProvider.isLoading}');
+          debugPrint('metrics count: ${recordProvider.metrics.length}');
+          debugPrint('records count: ${recordProvider.records.length}');
+
           // 确保数据已加载
           if (recordProvider.isLoading) {
+            debugPrint('StatsScreen: Still loading...');
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -78,7 +92,7 @@ class _StatsScreenState extends State<StatsScreen> {
           _initializeMetric(recordProvider);
 
           if (_selectedMetricId.isEmpty) {
-            debugPrint('StatsScreen: Selected metric ID is empty');
+            debugPrint('StatsScreen: Selected metric ID is empty after init');
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -94,6 +108,7 @@ class _StatsScreenState extends State<StatsScreen> {
             debugPrint('Record: metric_id=${r['metric_id']}, value=${r['value']}, recorded_at=${r['recorded_at']}');
           }
 
+          debugPrint('=== 构建内容 ===');
           return _buildContent(recordProvider);
         },
       ),
