@@ -21,15 +21,10 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   void initState() {
     super.initState();
-    // 延迟初始化，等待数据加载
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeMetric();
-    });
   }
 
-  void _initializeMetric() {
-    final recordProvider = context.read<RecordProvider>();
-    if (recordProvider.metrics.isNotEmpty && _selectedMetricId.isEmpty) {
+  void _initializeMetric(RecordProvider recordProvider) {
+    if (_selectedMetricId.isEmpty && recordProvider.metrics.isNotEmpty) {
       final weightMetric = recordProvider.metrics.firstWhere(
         (m) => m['name'] == '体重',
         orElse: () => recordProvider.metrics.first,
@@ -67,8 +62,9 @@ class _StatsScreenState extends State<StatsScreen> {
           }
 
           // 初始化选中的指标
+          _initializeMetric(recordProvider);
+
           if (_selectedMetricId.isEmpty) {
-            _initializeMetric();
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -175,17 +171,6 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildMetricSelector(RecordProvider recordProvider) {
     final metrics = recordProvider.metrics;
-    
-    // 初始化选择
-    if (_selectedMetricId.isEmpty && metrics.isNotEmpty) {
-      final weightMetric = metrics.firstWhere(
-        (m) => m['name'] == '体重',
-        orElse: () => metrics.first,
-      );
-      _selectedMetricId = weightMetric['id'];
-      _selectedMetricName = weightMetric['name'];
-      _selectedMetricUnit = weightMetric['unit'] ?? '';
-    }
 
     return Card(
       child: Padding(
@@ -269,7 +254,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildTrendChart(RecordProvider recordProvider) {
     final records = _getFilteredRecords(recordProvider.records);
-    
+
     if (records.isEmpty) {
       return Card(
         child: Padding(
@@ -495,7 +480,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildSummaryStats(RecordProvider recordProvider) {
     final records = _getFilteredRecords(recordProvider.records);
-    
+
     if (records.isEmpty) {
       return const SizedBox();
     }
@@ -583,7 +568,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildRecentRecords(RecordProvider recordProvider) {
     final records = _getFilteredRecords(recordProvider.records).take(5).toList();
-    
+
     if (records.isEmpty) {
       return const SizedBox();
     }
@@ -656,7 +641,7 @@ class _StatsScreenState extends State<StatsScreen> {
   List<dynamic> _getFilteredRecords(List<dynamic> allRecords) {
     final now = DateTime.now();
     final cutoff = now.subtract(Duration(days: _timeRangeDays));
-    
+
     return allRecords
         .where((record) {
           // 处理时间戳（可能是秒或毫秒）
@@ -675,7 +660,7 @@ class _StatsScreenState extends State<StatsScreen> {
   void _refreshData() {
     final recordProvider = context.read<RecordProvider>();
     recordProvider.loadRecords();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('数据已刷新'),

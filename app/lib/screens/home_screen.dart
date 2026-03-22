@@ -320,14 +320,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                         ],
                       ),
-                    ] else if (metric['unit'] != null && metric['unit']!.isNotEmpty)
-                      Text(
-                        metric['unit'],
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: color.withOpacity(0.7),
-                        ),
-                      ),
+                    ],
                   ],
                 ),
               ),
