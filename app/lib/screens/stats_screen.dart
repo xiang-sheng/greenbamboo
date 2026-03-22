@@ -19,6 +19,30 @@ class _StatsScreenState extends State<StatsScreen> {
   int _timeRangeDays = 7;
 
   @override
+  void initState() {
+    super.initState();
+    // 延迟初始化，等待数据加载
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeMetric();
+    });
+  }
+
+  void _initializeMetric() {
+    final recordProvider = context.read<RecordProvider>();
+    if (recordProvider.metrics.isNotEmpty && _selectedMetricId.isEmpty) {
+      final weightMetric = recordProvider.metrics.firstWhere(
+        (m) => m['name'] == '体重',
+        orElse: () => recordProvider.metrics.first,
+      );
+      setState(() {
+        _selectedMetricId = weightMetric['id'];
+        _selectedMetricName = weightMetric['name'];
+        _selectedMetricUnit = weightMetric['unit'] ?? '';
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -37,12 +61,54 @@ class _StatsScreenState extends State<StatsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // 如果没有指标，提示用户创建
+          if (recordProvider.metrics.isEmpty) {
+            return _buildNoMetricsState();
+          }
+
+          // 初始化选中的指标
+          if (_selectedMetricId.isEmpty) {
+            _initializeMetric();
+            return const Center(child: CircularProgressIndicator());
+          }
+
           if (recordProvider.records.isEmpty) {
             return _buildEmptyState();
           }
 
           return _buildContent(recordProvider);
         },
+      ),
+    );
+  }
+
+  Widget _buildNoMetricsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.category_outlined,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '暂无指标',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '请先在"指标"页面创建指标',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -295,7 +361,11 @@ class _StatsScreenState extends State<StatsScreen> {
                         getTitlesWidget: (value, meta) {
                           if (value.toInt() >= spots.length) return const SizedBox();
                           final record = records[value.toInt()];
-                          final date = DateTime.fromMillisecondsSinceEpoch(record['recorded_at'] * 1000);
+                          final recordedAt = record['recorded_at'];
+                          final recordedAtMs = recordedAt is int
+                              ? (recordedAt > 10000000000 ? recordedAt : recordedAt * 1000)
+                              : DateTime.parse(recordedAt.toString()).millisecondsSinceEpoch;
+                          final date = DateTime.fromMillisecondsSinceEpoch(recordedAtMs);
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
@@ -539,7 +609,11 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
             const SizedBox(height: 12),
             ...records.map((record) {
-              final date = DateTime.fromMillisecondsSinceEpoch(record['recorded_at'] * 1000);
+              final recordedAt = record['recorded_at'];
+              final recordedAtMs = recordedAt is int
+                  ? (recordedAt > 10000000000 ? recordedAt : recordedAt * 1000)
+                  : DateTime.parse(recordedAt.toString()).millisecondsSinceEpoch;
+              final date = DateTime.fromMillisecondsSinceEpoch(recordedAtMs);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
@@ -585,7 +659,12 @@ class _StatsScreenState extends State<StatsScreen> {
     
     return allRecords
         .where((record) {
-          final recordDate = DateTime.fromMillisecondsSinceEpoch(record['recorded_at'] * 1000);
+          // 处理时间戳（可能是秒或毫秒）
+          final recordedAt = record['recorded_at'];
+          final recordedAtMs = recordedAt is int
+              ? (recordedAt > 10000000000 ? recordedAt : recordedAt * 1000)
+              : DateTime.parse(recordedAt.toString()).millisecondsSinceEpoch;
+          final recordDate = DateTime.fromMillisecondsSinceEpoch(recordedAtMs);
           return recordDate.isAfter(cutoff);
         })
         .where((record) => record['metric_id'] == _selectedMetricId)

@@ -299,16 +299,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     if (latestValue != null) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        latestValue.toString(),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: color,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            latestValue.toString(),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
+                          ),
+                          if (metric['unit'] != null && metric['unit']!.isNotEmpty)
+                            Text(
+                              metric['unit'],
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: color.withOpacity(0.7),
+                              ),
+                            ),
+                        ],
                       ),
-                    ],
-                    if (metric['unit'] != null && metric['unit']!.isNotEmpty)
+                    ] else if (metric['unit'] != null && metric['unit']!.isNotEmpty)
                       Text(
                         metric['unit'],
                         style: TextStyle(
@@ -362,7 +374,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: todayRecords.map((record) {
                 final metricName = record['metric_name'] ?? '未知';
                 final value = record['value'];
-                final unit = '';
+                // 从指标中获取单位
+                final metric = recordProvider.metrics.cast<Map<String, dynamic>>().firstWhere(
+                  (m) => m['id'] == record['metric_id'],
+                  orElse: () => {'unit': ''},
+                );
+                final unit = metric['unit'] ?? '';
 
                 return _buildSummaryItem(metricName, value?.toString() ?? '', unit);
               }).toList(),
