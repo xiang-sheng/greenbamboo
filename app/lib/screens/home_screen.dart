@@ -223,82 +223,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildMetricsGrid(BuildContext context, List<dynamic> metrics) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1,
-      ),
-      itemCount: metrics.length,
-      itemBuilder: (context, index) {
-        final metric = metrics[index];
-        final isPreset = metric['is_preset'] == 1;
-
-        IconData icon;
-        Color color;
-
-        switch (metric['name']) {
-          case '体重':
-            icon = Icons.monitor_weight;
-            color = Colors.blue;
-            break;
-          case '睡眠':
-            icon = Icons.bedtime;
-            color = Colors.purple;
-            break;
-          case '运动':
-            icon = Icons.fitness_center;
-            color = Colors.orange;
-            break;
-          case '心情':
-            icon = Icons.sentiment_satisfied;
-            color = Colors.green;
-            break;
-          default:
-            icon = isPreset ? Icons.eco : Icons.category;
-            color = isPreset ? Colors.green : Colors.blue;
-        }
-
-        return InkWell(
-          onTap: () => _showRecordDialog(context, metric),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: color.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 32, color: color),
-                const SizedBox(height: 8),
-                Text(
-                  metric['name'],
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                if (metric['unit'] != null && metric['unit']!.isNotEmpty)
-                  Text(
-                    metric['unit'],
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: color.withOpacity(0.7),
-                    ),
-                  ),
-              ],
-            ),
+    return Consumer<RecordProvider>(
+      builder: (context, recordProvider, child) {
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1,
           ),
+          itemCount: metrics.length,
+          itemBuilder: (context, index) {
+            final metric = metrics[index];
+            final isPreset = metric['is_preset'] == 1;
+            
+            // 查找该指标的最新记录
+            final metricRecords = recordProvider.records
+                .where((r) => r['metric_id'] == metric['id'])
+                .toList();
+            final latestRecord = metricRecords.isNotEmpty ? metricRecords.first : null;
+            final latestValue = latestRecord?['value'];
+
+            IconData icon;
+            Color color;
+
+            switch (metric['name']) {
+              case '体重':
+                icon = Icons.monitor_weight;
+                color = Colors.blue;
+                break;
+              case '睡眠':
+                icon = Icons.bedtime;
+                color = Colors.purple;
+                break;
+              case '运动':
+                icon = Icons.fitness_center;
+                color = Colors.orange;
+                break;
+              case '心情':
+                icon = Icons.sentiment_satisfied;
+                color = Colors.green;
+                break;
+              default:
+                icon = isPreset ? Icons.eco : Icons.category;
+                color = isPreset ? Colors.green : Colors.blue;
+            }
+
+            return InkWell(
+              onTap: () => _showRecordDialog(context, metric),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: color.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, size: 32, color: color),
+                    const SizedBox(height: 8),
+                    Text(
+                      metric['name'],
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (latestValue != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        latestValue.toString(),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                    if (metric['unit'] != null && metric['unit']!.isNotEmpty)
+                      Text(
+                        metric['unit'],
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: color.withOpacity(0.7),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

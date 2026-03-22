@@ -135,10 +135,21 @@ class RecordProvider extends ChangeNotifier {
       final now = DateTime.now();
       final recordId = '${now.millisecondsSinceEpoch}_${_generateId(8)}';
 
+      // 获取指标名称
+      String metricName = '';
+      final metric = _metrics.cast<Map<String, dynamic>>().firstWhere(
+        (m) => m['id'] == metricId,
+        orElse: () => {},
+      );
+      if (metric.isNotEmpty) {
+        metricName = metric['name'] ?? '';
+      }
+
       // 保存到本地数据库
       await _localDb.insertRecord(
         id: recordId,
         metricId: metricId,
+        metricName: metricName,
         value: value,
         note: note,
         recordedAt: recordedAt ?? now,
