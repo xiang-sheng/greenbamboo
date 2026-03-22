@@ -60,12 +60,16 @@ class _StatsScreenState extends State<StatsScreen> {
       ),
       body: Consumer<RecordProvider>(
         builder: (context, recordProvider, child) {
+          // 确保数据已加载
           if (recordProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          debugPrint('StatsScreen: metrics count = ${recordProvider.metrics.length}, records count = ${recordProvider.records.length}');
+
           // 如果没有指标，提示用户创建
           if (recordProvider.metrics.isEmpty) {
+            debugPrint('StatsScreen: No metrics found');
             return _buildNoMetricsState();
           }
 
@@ -73,10 +77,18 @@ class _StatsScreenState extends State<StatsScreen> {
           _initializeMetric(recordProvider);
 
           if (_selectedMetricId.isEmpty) {
+            debugPrint('StatsScreen: Selected metric ID is empty');
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (recordProvider.records.isEmpty) {
+          debugPrint('StatsScreen: Selected metric ID = $_selectedMetricId, name = $_selectedMetricName');
+
+          // 过滤记录
+          final filteredRecords = _getFilteredRecords(recordProvider.records);
+          debugPrint('StatsScreen: Filtered records count = ${filteredRecords.length}');
+
+          if (filteredRecords.isEmpty) {
+            debugPrint('StatsScreen: No records in selected time range');
             return _buildEmptyState();
           }
 
