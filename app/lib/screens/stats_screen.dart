@@ -32,16 +32,17 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   void _initializeMetric(RecordProvider recordProvider) {
+    // 只在首次初始化时设置，避免重复设置
     if (_selectedMetricId.isEmpty && recordProvider.metrics.isNotEmpty) {
       final weightMetric = recordProvider.metrics.firstWhere(
         (m) => m['name'] == '体重',
         orElse: () => recordProvider.metrics.first,
       );
-      setState(() {
-        _selectedMetricId = weightMetric['id'];
-        _selectedMetricName = weightMetric['name'];
-        _selectedMetricUnit = weightMetric['unit'] ?? '';
-      });
+      // 直接设置，不使用 setState（因为 Consumer 会自动重建）
+      _selectedMetricId = weightMetric['id'];
+      _selectedMetricName = weightMetric['name'];
+      _selectedMetricUnit = weightMetric['unit'] ?? '';
+      debugPrint('StatsScreen: Initialized metric - id=$_selectedMetricId, name=$_selectedMetricName');
     }
   }
 
