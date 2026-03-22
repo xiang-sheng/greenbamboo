@@ -87,9 +87,10 @@ class _StatsScreenState extends State<StatsScreen> {
           final filteredRecords = _getFilteredRecords(recordProvider.records);
           debugPrint('StatsScreen: Filtered records count = ${filteredRecords.length}');
 
-          if (filteredRecords.isEmpty) {
-            debugPrint('StatsScreen: No records in selected time range');
-            return _buildEmptyState();
+          // 输出所有记录信息
+          debugPrint('=== 所有记录 ===');
+          for (var r in recordProvider.records) {
+            debugPrint('Record: metric_id=${r['metric_id']}, value=${r['value']}, recorded_at=${r['recorded_at']}');
           }
 
           return _buildContent(recordProvider);
