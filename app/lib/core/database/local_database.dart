@@ -211,6 +211,12 @@ class LocalDatabase {
     await db.delete('records');
   }
 
+  /// 清空已同步到服务器的记录（保留未同步的本地记录）
+  Future<void> clearSyncedRecords() async {
+    final db = await database;
+    await db.delete('records', where: 'is_synced = ?', whereArgs: [1]);
+  }
+
   // ==================== 指标操作 ====================
 
   /// 插入指标

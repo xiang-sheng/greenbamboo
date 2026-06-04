@@ -24,8 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // 默认服务器地址（用户可修改）
-    _serverController.text = 'http://192.168.1.100:3000';
+    // 服务器地址（用户输入）
+    _serverController.text = '';
   }
 
   @override
@@ -48,16 +48,22 @@ class _LoginScreenState extends State<LoginScreen> {
       // 确保设置为服务器模式
       await storageProvider.switchToServer();
 
-      final success = await authProvider.login(
-        serverUrl: _serverController.text,
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
+      final success = _isLogin
+          ? await authProvider.login(
+              serverUrl: _serverController.text,
+              email: _emailController.text,
+              password: _passwordController.text,
+            )
+          : await authProvider.register(
+              serverUrl: _serverController.text,
+              email: _emailController.text,
+              password: _passwordController.text,
+            );
 
       if (success && mounted) {
         widget.onLoginSuccess?.call();
       } else if (!success && mounted) {
-        _showErrorDialog(authProvider.error ?? '登录失败');
+        _showErrorDialog(authProvider.error ?? (_isLogin ? '登录失败' : '注册失败'));
       }
     } catch (e) {
       if (mounted) {
@@ -142,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _serverController,
                       decoration: const InputDecoration(
                         labelText: '服务器地址',
-                        hintText: 'http://192.168.1.100:3000',
+                        hintText: '例如: http://your-server:3000',
                         prefixIcon: Icon(Icons.dns),
                       ),
                       keyboardType: TextInputType.url,

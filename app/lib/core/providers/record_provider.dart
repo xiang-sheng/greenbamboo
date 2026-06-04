@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../database/local_database.dart';
@@ -87,7 +88,7 @@ class RecordProvider extends ChangeNotifier {
         if (serverRecords.isNotEmpty) {
           _records = serverRecords;
           // 保存到本地
-          await _localDb.clearRecords();
+          await _localDb.clearSyncedRecords();
           for (var record in _records) {
             final recordedAt = record['recorded_at'];
             final recordedAtMs = recordedAt is int
@@ -262,12 +263,7 @@ class RecordProvider extends ChangeNotifier {
       }
 
       // 删除指标
-      final db = await _localDb.database;
-      await db.delete(
-        'metrics',
-        where: 'id = ?',
-        whereArgs: [metricId],
-      );
+      await _localDb.deleteMetric(metricId);
 
       // 重新加载
       _metrics = await _localDb.getMetrics();
@@ -342,11 +338,9 @@ class RecordProvider extends ChangeNotifier {
 
   String _generateId(int length) {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
     return String.fromCharCodes(
-      Iterable.generate(
-        length,
-        (_) => chars.codeUnitAt(DateTime.now().millisecondsSinceEpoch % chars.length),
-      ),
+      Iterable.generate(length, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
     );
   }
 }

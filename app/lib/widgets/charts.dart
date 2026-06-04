@@ -109,7 +109,7 @@ class BarChartWidget extends StatelessWidget {
 
   double _getMaxY() {
     if (data.isEmpty) return 100;
-    final max = data.map((d) => d['value'] as double).reduce((a, b) => a > b ? a : b);
+    final max = data.map((d) => (d['value'] as num?)?.toDouble() ?? 0.0).reduce((a, b) => a > b ? a : b);
     return (max + 10).ceilToDouble();
   }
 
@@ -271,6 +271,9 @@ class MiniChartWidget extends StatelessWidget {
     final spots = values.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList();
     final minY = values.reduce((a, b) => a < b ? a : b);
     final maxY = values.reduce((a, b) => a > b ? a : b);
+    // 防止所有值相同时 minY==maxY 导致图表崩溃
+    final chartMinY = (maxY - minY) > 0 ? minY - (maxY - minY) * 0.1 : minY - 0.5;
+    final chartMaxY = (maxY - minY) > 0 ? maxY + (maxY - minY) * 0.1 : maxY + 0.5;
 
     return SizedBox(
       height: height,
@@ -281,8 +284,8 @@ class MiniChartWidget extends StatelessWidget {
           borderData: FlBorderData(show: false),
           minX: 0,
           maxX: spots.length - 1.0,
-          minY: minY - (maxY - minY) * 0.1,
-          maxY: maxY + (maxY - minY) * 0.1,
+          minY: chartMinY,
+          maxY: chartMaxY,
           lineBarsData: [
             LineChartBarData(
               spots: spots,

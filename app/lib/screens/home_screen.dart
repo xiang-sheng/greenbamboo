@@ -335,9 +335,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Consumer<RecordProvider>(
       builder: (context, recordProvider, child) {
         final todayRecords = recordProvider.records.where((r) {
-          final recordDate = DateTime.fromMillisecondsSinceEpoch(
-            r['recorded_at'] is int ? r['recorded_at'] : DateTime.parse(r['recorded_at']).millisecondsSinceEpoch,
-          );
+          final recordedAt = r['recorded_at'];
+          if (recordedAt == null) return false;
+          final recordedAtMs = recordedAt is int
+              ? (recordedAt > 10000000000 ? recordedAt : recordedAt * 1000)
+              : DateTime.tryParse(recordedAt.toString())?.millisecondsSinceEpoch ?? 0;
+          final recordDate = DateTime.fromMillisecondsSinceEpoch(recordedAtMs);
           final today = DateTime.now();
           return recordDate.year == today.year &&
               recordDate.month == today.month &&

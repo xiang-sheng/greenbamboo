@@ -335,7 +335,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: true,
-                    horizontalInterval: (maxY - minY) / 4,
+                    horizontalInterval: (maxY - minY) > 0 ? (maxY - minY) / 4 : 1.0,
                     verticalInterval: 1,
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
@@ -358,7 +358,7 @@ class _StatsScreenState extends State<StatsScreen> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 40,
-                        interval: (maxY - minY) / 4,
+                        interval: (maxY - minY) > 0 ? (maxY - minY) / 4 : 1.0,
                         getTitlesWidget: (value, meta) {
                           return Text(
                             value.toStringAsFixed(1),
@@ -462,10 +462,10 @@ class _StatsScreenState extends State<StatsScreen> {
       return const SizedBox();
     }
 
-    final firstValue = records.first['value'] ?? 0.0;
-    final lastValue = records.last['value'] ?? 0.0;
+    final firstValue = (records.first['value'] ?? 0.0).toDouble();
+    final lastValue = (records.last['value'] ?? 0.0).toDouble();
     final change = lastValue - firstValue;
-    final changePercent = (change / firstValue * 100).abs();
+    final changePercent = firstValue != 0 ? (change / firstValue * 100).abs() : 0.0;
 
     final isUp = change >= 0;
     final trendColor = isUp ? Colors.red : Colors.green;
@@ -683,7 +683,13 @@ class _StatsScreenState extends State<StatsScreen> {
         })
         .where((record) => record['metric_id'] == _selectedMetricId)
         .toList()
-      ..sort((a, b) => b['recorded_at'].compareTo(a['recorded_at']));
+      ..sort((a, b) {
+        final aTime = a['recorded_at'];
+        final bTime = b['recorded_at'];
+        final aMs = aTime is int ? aTime : (aTime is String ? DateTime.tryParse(aTime)?.millisecondsSinceEpoch ?? 0 : 0);
+        final bMs = bTime is int ? bTime : (bTime is String ? DateTime.tryParse(bTime)?.millisecondsSinceEpoch ?? 0 : 0);
+        return bMs.compareTo(aMs);
+      });
   }
 
   void _refreshData() {

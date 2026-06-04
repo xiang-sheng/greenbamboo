@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -106,6 +107,38 @@ func Sync(c *gin.Context) {
 		serverChanges = append(serverChanges, vo)
 	}
 
+	// 2. 冲突检测
+	conflicts := make([]Conflict, 0)
+	for _, localRecord := range req.LocalChanges {
+		for _, serverRecord := range serverRecords {
+			if localRecord.MetricID == serverRecord.MetricID {
+				timeDiff := localRecord.RecordedAt - serverRecord.RecordedAt
+				if timeDiff < 0 {
+					timeDiff = -timeDiff
+				}
+				if timeDiff < 60 {
+					conflicts = append(conflicts, Conflict{
+						Local: RecordVO{
+							MetricID:   localRecord.MetricID,
+							Value:      localRecord.Value,
+							TextValue:  localRecord.TextValue,
+							Note:       localRecord.Note,
+							RecordedAt: localRecord.RecordedAt,
+						},
+						Server: RecordVO{
+							ID:         serverRecord.ID,
+							MetricID:   serverRecord.MetricID,
+							Value:      serverRecord.Value,
+							TextValue:  serverRecord.TextValue,
+							Note:       serverRecord.Note,
+							RecordedAt: serverRecord.RecordedAt,
+						},
+					})
+				}
+			}
+		}
+	}
+
 	// 3. 更新设备信息
 	if req.DeviceID != "" {
 		device := database.Device{
@@ -114,7 +147,11 @@ func Sync(c *gin.Context) {
 			DeviceName: req.DeviceName,
 			LastSync:   time.Now().Unix(),
 		}
-		db.Where("id = ? AND user_id = ?", req.DeviceID, userID).FirstOrCreate(&device)
+		if err := db.Where("id = ? AND user_id = ?", req.DeviceID, userID).
+			Assign(database.Device{DeviceName: req.DeviceName, LastSync: time.Now().Unix()}).
+			FirstOrCreate(&device).Error; err != nil {
+			log.Printf("Failed to update device info: %v", err)
+		}
 	}
 
 	// 4. 返回同步结果
@@ -125,7 +162,7 @@ func Sync(c *gin.Context) {
 		"message": "success",
 		"data": SyncResponse{
 			ServerChanges: serverChanges,
-			Conflicts:     []Conflict{}, // TODO: 实现冲突检测
+			Conflicts:     conflicts,
 			NewLastSync:   newLastSync,
 		},
 	})

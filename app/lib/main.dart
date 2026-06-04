@@ -120,9 +120,11 @@ class _AppStartupState extends State<AppStartup> {
     final storageProvider = context.read<StorageModeProvider>();
     final authProvider = context.read<AuthProvider>();
     
-    // 等待 Provider 初始化完成
-    while (storageProvider.isLoading || authProvider.isLoading) {
+    // 等待 Provider 初始化完成（最多等待 10 秒）
+    int maxAttempts = 200;
+    while ((storageProvider.isLoading || authProvider.isLoading) && maxAttempts > 0) {
       await Future.delayed(const Duration(milliseconds: 50));
+      maxAttempts--;
     }
     
     // 检查是否需要 onboarding
@@ -181,16 +183,18 @@ class _AppStartupState extends State<AppStartup> {
       );
     }
     
-    // 需要登录
-    if (_showLogin) {
-      return LoginScreen(
-        onLoginSuccess: _handleLoginSuccess,
-        onBack: _handleLoginBack,
-      );
-    }
-    
-    // 正常进入主页
-    return const HomeScreen();
+    // 监听认证状态，服务器模式下登出后自动返回登录页
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        if (_showLogin || (context.read<StorageModeProvider>().isServerMode && !authProvider.isLoggedIn)) {
+          return LoginScreen(
+            onLoginSuccess: _handleLoginSuccess,
+            onBack: _handleLoginBack,
+          );
+        }
+        return const HomeScreen();
+      },
+    );
   }
 
   Widget _buildLoadingScreen() {

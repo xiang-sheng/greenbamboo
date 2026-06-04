@@ -71,7 +71,12 @@ class ApiService {
     _token = token;
   }
 
-
+  /// 确保 base URL 已设置
+  void _ensureBaseUrl() {
+    if (_baseUrl == null || _baseUrl!.isEmpty) {
+      throw Exception('服务器地址未设置，请先配置服务器地址');
+    }
+  }
 
   // ==================== 认证接口 ====================
 
@@ -80,6 +85,7 @@ class ApiService {
     required String email,
     required String password,
   }) async {
+    _ensureBaseUrl();
     final response = await _dio.post(
       '$_baseUrl/api/v1/auth/register',
       data: jsonEncode({
@@ -95,6 +101,7 @@ class ApiService {
     required String email,
     required String password,
   }) async {
+    _ensureBaseUrl();
     final response = await _dio.post(
       '$_baseUrl/api/v1/auth/login',
       data: jsonEncode({
@@ -109,6 +116,7 @@ class ApiService {
 
   /// 获取指标列表
   Future<List<dynamic>> getMetrics() async {
+    _ensureBaseUrl();
     final response = await _dio.get('$_baseUrl/api/v1/metrics');
     final data = response.data as Map<String, dynamic>;
     return data['data'] as List<dynamic>;
@@ -120,6 +128,7 @@ class ApiService {
     required String type,
     String? unit,
   }) async {
+    _ensureBaseUrl();
     final response = await _dio.post(
       '$_baseUrl/api/v1/metrics',
       data: jsonEncode({
@@ -139,6 +148,7 @@ class ApiService {
     DateTime? since,
     int limit = 100,
   }) async {
+    _ensureBaseUrl();
     final queryParams = <String, dynamic>{
       'limit': limit,
     };
@@ -164,6 +174,7 @@ class ApiService {
     String? note,
     DateTime? recordedAt,
   }) async {
+    _ensureBaseUrl();
     final response = await _dio.post(
       '$_baseUrl/api/v1/records',
       data: jsonEncode({
@@ -180,6 +191,7 @@ class ApiService {
   Future<Map<String, dynamic>> createRecordsBulk({
     required List<Map<String, dynamic>> records,
   }) async {
+    _ensureBaseUrl();
     final response = await _dio.post(
       '$_baseUrl/api/v1/records/bulk',
       data: jsonEncode({
@@ -191,6 +203,7 @@ class ApiService {
 
   /// 删除记录
   Future<void> deleteRecord(String recordId) async {
+    _ensureBaseUrl();
     await _dio.delete('$_baseUrl/api/v1/records/$recordId');
   }
 
@@ -201,6 +214,7 @@ class ApiService {
     required String metricId,
     int days = 30,
   }) async {
+    _ensureBaseUrl();
     final response = await _dio.get(
       '$_baseUrl/api/v1/stats/trend',
       queryParameters: {
@@ -216,6 +230,7 @@ class ApiService {
     String? metricId,
     int days = 30,
   }) async {
+    _ensureBaseUrl();
     final response = await _dio.get(
       '$_baseUrl/api/v1/stats/summary',
       queryParameters: {
@@ -236,6 +251,7 @@ class ApiService {
     String? deviceName,
     String? appVersion,
   }) async {
+    _ensureBaseUrl();
     final response = await _dio.post(
       '$_baseUrl/api/v1/sync',
       data: jsonEncode({
@@ -253,6 +269,7 @@ class ApiService {
 
   /// 健康检查
   Future<bool> healthCheck() async {
+    _ensureBaseUrl();
     try {
       final response = await _dio.get('$_baseUrl/api/v1/health');
       return response.data['status'] == 'ok';

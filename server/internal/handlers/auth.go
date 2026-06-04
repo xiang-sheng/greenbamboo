@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -92,7 +95,9 @@ func Register(c *gin.Context) {
 		preset := p
 		preset.ID = generateID()
 		preset.UserID = user.ID
-		db.Create(&preset)
+		if err := db.Create(&preset).Error; err != nil {
+			log.Printf("Failed to create preset metric %s: %v", preset.Name, err)
+		}
 	}
 
 	// 生成 JWT Token
@@ -192,10 +197,9 @@ func GetProfile(c *gin.Context) {
 
 // UpdateProfile 更新用户信息
 func UpdateProfile(c *gin.Context) {
-	// TODO: 实现更新逻辑
-	c.JSON(http.StatusOK, gin.H{
-		"code":    0,
-		"message": "success",
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"code":    50100,
+		"message": "Profile update not yet implemented",
 	})
 }
 
@@ -213,7 +217,6 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		}
 
 		// 提取 Token
-		tokenString := authHeader[7:] // 去掉 "Bearer "
 		if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    40100,
@@ -222,6 +225,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		tokenString := authHeader[7:]
 
 		// 解析 Token
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -251,8 +255,18 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		userID := claims["user_id"].(string)
-		userEmail := claims["email"].(string)
+		userID, ok := claims["user_id"].(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"code": 40100, "message": "Invalid token claims: missing user_id"})
+			c.Abort()
+			return
+		}
+		userEmail, ok := claims["email"].(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"code": 40100, "message": "Invalid token claims: missing email"})
+			c.Abort()
+			return
+		}
 
 		c.Set("userID", userID)
 		c.Set("userEmail", userEmail)
@@ -280,7 +294,13 @@ func generateToken(userID, email string) (string, error) {
 func getJWTSecret() string {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "greenbamboo-default-secret-change-in-production"
+		log.Println("WARNING: JWT_SECRET not set, using auto-generated random secret")
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			log.Printf("Failed to generate random JWT secret: %v", err)
+			return "greenbamboo-fallback-secret-DO-NOT-use-in-production"
+		}
+		secret = hex.EncodeToString(b)
 	}
 	return secret
 }
@@ -292,11 +312,10 @@ func generateID() string {
 
 // generateRandomString 生成随机字符串
 func generateRandomString(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[time.Now().UnixNano()%int64(len(letters))]
-		time.Sleep(time.Nanosecond) // 确保随机性
+	if _, err := rand.Read(b); err != nil {
+		log.Printf("Failed to generate random string: %v", err)
+		return hex.EncodeToString([]byte(time.Now().Format("20060102150405")))[:n]
 	}
-	return string(b)
+	return hex.EncodeToString(b)[:n]
 }

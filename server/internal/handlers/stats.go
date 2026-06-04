@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -40,8 +41,9 @@ func GetTrendStats(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 
 	// 查询指定天数的数据
+	since := time.Now().AddDate(0, 0, -req.Days).Unix()
 	var records []database.HealthRecord
-	if err := db.Where("user_id = ? AND metric_id = ?", userID, req.MetricID).
+	if err := db.Where("user_id = ? AND metric_id = ? AND recorded_at > ?", userID, req.MetricID, since).
 		Order("recorded_at ASC").
 		Find(&records).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -52,18 +54,22 @@ func GetTrendStats(c *gin.Context) {
 	}
 
 	// 按天聚合
-	dailyData := make(map[int64]float64)
+	dailyData := make(map[int64][]float64)
 	for _, r := range records {
 		day := r.RecordedAt / 86400 // 转换为天
-		dailyData[day] = r.Value
+		dailyData[day] = append(dailyData[day], r.Value)
 	}
 
 	// 转换为数组
 	dataPoints := make([]TrendDataPoint, 0, len(dailyData))
-	for day, value := range dailyData {
+	for day, values := range dailyData {
+		var sum float64
+		for _, v := range values {
+			sum += v
+		}
 		dataPoints = append(dataPoints, TrendDataPoint{
 			Time:  day * 86400,
-			Value: value,
+			Value: sum / float64(len(values)),
 		})
 	}
 
@@ -113,7 +119,8 @@ func GetSummaryStats(c *gin.Context) {
 	db := c.MustGet("db").(*gorm.DB)
 
 	// 构建查询
-	query := db.Where("user_id = ?", userID)
+	since := time.Now().AddDate(0, 0, -req.Days).Unix()
+	query := db.Where("user_id = ? AND recorded_at > ?", userID, since)
 	if req.MetricID != "" {
 		query = query.Where("metric_id = ?", req.MetricID)
 	}

@@ -28,6 +28,14 @@ func InitDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.Exec("PRAGMA journal_mode=WAL;")
+	sqlDB.Exec("PRAGMA busy_timeout=5000;")
+
 	return db, nil
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/auth_provider.dart';
+import '../core/providers/record_provider.dart';
 import '../core/providers/storage_mode_provider.dart';
 import '../core/database/local_database.dart';
 import '../core/services/data_migration_service.dart';
@@ -453,32 +454,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     try {
       final data = await localDb.exportData();
-      // TODO: 保存到文件或分享
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('备份成功：${data['records']?.length ?? 0} 条记录'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('备份数据'),
+            content: Text('备份功能开发中，当前可导出数据：\n\n'
+                '记录数：${data['records']?.length ?? 0}\n'
+                '指标数：${data['metrics']?.length ?? 0}\n'
+                '导出时间：${data['exported_at']}'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('备份失败: $e'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('备份失败: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
   void _handleRestore() {
-    // TODO: 从文件恢复数据
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('恢复功能开发中')),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('恢复数据'),
+        content: const Text('恢复功能开发中，敬请期待。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
     );
   }
 
   void _syncData(BuildContext context) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('正在同步数据...')),
-    );
-    // TODO: 调用同步 API
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('正在同步数据...')),
+      );
+      await context.read<RecordProvider>().sync();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('同步完成')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('同步失败: $e')),
+        );
+      }
+    }
   }
 
   Future<bool> _showConfirmDialog({
@@ -545,8 +581,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await authProvider.logout();
               if (context.mounted) {
                 Navigator.pop(context);
-                // 返回设置页面，由 AppStartup 处理跳转
-                Navigator.of(context).pop();
+                // 返回到根路由，由 AppStartup 的 Consumer 自动处理登录页显示
+                Navigator.of(context).popUntil((route) => route.isFirst);
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

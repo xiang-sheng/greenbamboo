@@ -78,6 +78,13 @@ func GetRecords(c *gin.Context) {
 	}
 
 	// 转换为 VO（包含指标名称）
+	var allMetrics []database.Metric
+	db.Where("user_id = ?", userID).Find(&allMetrics)
+	metricNameMap := make(map[string]string)
+	for _, m := range allMetrics {
+		metricNameMap[m.ID] = m.Name
+	}
+
 	recordVOs := make([]RecordVO, 0, len(records))
 	for _, r := range records {
 		vo := RecordVO{
@@ -91,10 +98,7 @@ func GetRecords(c *gin.Context) {
 		}
 
 		// 获取指标名称
-		var metric database.Metric
-		if err := db.Where("id = ?", r.MetricID).First(&metric).Error; err == nil {
-			vo.MetricName = metric.Name
-		}
+		vo.MetricName = metricNameMap[r.MetricID]
 
 		recordVOs = append(recordVOs, vo)
 	}
@@ -265,7 +269,14 @@ func UpdateRecord(c *gin.Context) {
 		return
 	}
 
-	record.MetricID = req.MetricID
+	if req.MetricID != "" && req.MetricID != record.MetricID {
+		var metric database.Metric
+		if err := db.Where("id = ? AND user_id = ?", req.MetricID, userID).First(&metric).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"code": 40400, "message": "Metric not found"})
+			return
+		}
+		record.MetricID = req.MetricID
+	}
 	record.Value = req.Value
 	record.TextValue = req.TextValue
 	record.Note = req.Note
@@ -303,10 +314,18 @@ func DeleteRecord(c *gin.Context) {
 
 	db := c.MustGet("db").(*gorm.DB)
 
-	if err := db.Where("id = ? AND user_id = ?", recordID, userID).Delete(&database.HealthRecord{}).Error; err != nil {
+	result := db.Where("id = ? AND user_id = ?", recordID, userID).Delete(&database.HealthRecord{})
+	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    50000,
 			"message": "Failed to delete record",
+		})
+		return
+	}
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    40400,
+			"message": "Record not found",
 		})
 		return
 	}

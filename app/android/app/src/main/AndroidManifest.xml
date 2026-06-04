@@ -4,15 +4,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     
-    <!-- 存储权限（可选，用于备份） -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- 存储权限（Android 13+ 已弃用，备份功能使用 SAF） -->
     
     <application
         android:label="青竹"
         android:name="${applicationName}"
         android:icon="@drawable/ic_launcher"
         android:usesCleartextTraffic="true">
+        <!-- 注意：usesCleartextTraffic=true 是因为自部署服务器可能使用 HTTP。
+             生产环境建议配置 network_security_config.xml 限制明文通信范围。 -->
         
         <activity
             android:name=".MainActivity"

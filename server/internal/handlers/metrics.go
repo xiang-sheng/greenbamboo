@@ -170,10 +170,18 @@ func DeleteMetric(c *gin.Context) {
 
 	db := c.MustGet("db").(*gorm.DB)
 
-	if err := db.Where("id = ? AND user_id = ?", metricID, userID).Delete(&database.Metric{}).Error; err != nil {
+	result := db.Where("id = ? AND user_id = ?", metricID, userID).Delete(&database.Metric{})
+	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    50000,
 			"message": "Failed to delete metric",
+		})
+		return
+	}
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    40400,
+			"message": "Metric not found",
 		})
 		return
 	}
